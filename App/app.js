@@ -1,57 +1,27 @@
-const { Observable, from, of } = require('rxjs');var mqtt = require('./mqttCluster.js');
-const {  map,shareReplay,startWith, filter,switchMap, distinctUntilChanged} = require('rxjs/operators');
+const { Observable, } = require('rxjs');
+const {filter} = require('rxjs/operators');
+var mqtt = require('./mqttCluster.js');
 
 global.mtqqLocalPath = process.env.MQTTLOCAL;
+global.mtqqLocalPath = 'mqtt://192.168.0.11';
 
-
-
-
-const rawDoorSensor = new Observable(async subscriber => {  
+const remoteStream = new Observable(async subscriber => {  
     var mqttCluster=await mqtt.getClusterAsync()   
-    mqttCluster.subscribeData('zigbee2mqtt/0x00158d0007ecd814', function(content){    
+    mqttCluster.subscribeData('zigbee2mqtt/0x84ba20fffed19b98', function(content){   
             subscriber.next(content)
     });
-});
+  });
 
-const masterSwitchSensor = new Observable(async subscriber => {  
-    var mqttCluster=await mqtt.getClusterAsync()   
-    mqttCluster.subscribeData('zigbee2mqtt/0x94deb8fffe57b8ff', function(content){    
-            subscriber.next(content)
-    });
-});
+  const onStream = remoteStream.pipe(
+    filter( m => m.action==='on')
+  )
+  const offStream = remoteStream.pipe(
+    filter( m => m.action==='brightness_move_up')
+  )
 
-
-const doorSensor = rawDoorSensor.pipe( map(m => !m.contact),shareReplay(1))
-
-
-
-
-const masterSwitchStream = masterSwitchSensor.pipe(
-    filter( c=> c.action==='on' || c.action==='brightness_stop' || c.action==='brightness_move_up')
-    ,map(m => m.action==='on')
-    ,startWith(true)
-    ,distinctUntilChanged()
-)
-
-
-const operationStream = masterSwitchStream.pipe(
-    switchMap( ms => {
-        if (ms){
-          return doorSensor
-        }
-        else{
-            return of(ms)
-        }
-           
-    })
-)
-
-operationStream
-.subscribe(async m => {
-    const state = m?"ON":"OFF";
-    (await mqtt.getClusterAsync()).publishData('zigbee2mqtt/0x00124b0024c2eaf7/set',{state})
-})
-
-
-
-
+  onStream.subscribe(async m => {
+    (await mqtt.getClusterAsync()).publishMessage('zigbee2mqtt/0x0c4314fffe20cca2/set',JSON.stringify({state:'ON'}));    
+  })
+  offStream.subscribe(async m => {
+    (await mqtt.getClusterAsync()).publishMessage('zigbee2mqtt/0x0c4314fffe20cca2/set',JSON.stringify({state:'OFF'}));    
+  })
