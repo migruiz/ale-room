@@ -20,8 +20,8 @@ const remoteStream = new Observable(async subscriber => {
   )
 
   onStream.subscribe(async m => {
-    (await mqtt.getClusterAsync()).publishMessage('zigbee2mqtt/0x0c4314fffe20cca2/set',JSON.stringify({state:'ON'}));    
+    (await mqtt.getClusterAsync()).publishMessage('zigbee2mqtt/0x385b44fffee786e7/set',JSON.stringify({state:'ON'}));    
   })
   offStream.subscribe(async m => {
-    (await mqtt.getClusterAsync()).publishMessage('zigbee2mqtt/0x0c4314fffe20cca2/set',JSON.stringify({state:'OFF'}));    
+    (await mqtt.getClusterAsync()).publishMessage('zigbee2mqtt/0x385b44fffee786e7/set',JSON.stringify({state:'OFF'}));    
   })
